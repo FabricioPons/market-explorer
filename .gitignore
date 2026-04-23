@@ -1,0 +1,6 @@
+archive/
+__pycache__/
+*.pyc
+.DS_Store
+pipeline_log.txt
+links.txt

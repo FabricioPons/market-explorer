@@ -1,0 +1,1583 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Market Snapshot Dot Explorer</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface-soft: #eef3f7;
+      --ink: #202428;
+      --muted: #5f6872;
+      --line: #d7dee6;
+      --accent: #087f5b;
+      --accent-soft: #e7f6ef;
+      --warn: #a65000;
+      --warn-soft: #fff3df;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", Tahoma, Arial, sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 22px 18px 34px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.75fr);
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .kicker {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 34px;
+      line-height: 1.08;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: 19px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin-bottom: 7px;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .lede {
+      max-width: 940px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .quick-read, .tile, .explain-card, .control-band, .filter-band,
+    .reading-panel, .data-table-wrap, .glossary {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .quick-read {
+      padding: 14px;
+      min-height: 116px;
+    }
+
+    .quick-read strong { color: var(--accent); }
+
+    .quick-label {
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .quick-read p {
+      margin-bottom: 7px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .quick-read p:last-child { margin-bottom: 0; }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .tile {
+      padding: 12px;
+      min-height: 82px;
+    }
+
+    .tile-label {
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tile-value {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .tile-note {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .explain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .explain-card { padding: 14px; }
+
+    .explain-card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .control-band {
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .control label, .inline-control label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .control select, .control input, .inline-control select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    .control input[type="range"] {
+      padding: 0;
+      accent-color: var(--accent);
+    }
+
+    .control small {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 9px 11px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button.primary {
+      border-color: #87cbb1;
+      background: var(--accent-soft);
+      color: #07583f;
+    }
+
+    button:hover { border-color: #9aa7b4; }
+
+    .filter-band {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .filter-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .filter-title h2 {
+      margin-bottom: 0;
+      font-size: 16px;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-actions button {
+      padding: 6px 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface-soft);
+      padding: 7px 9px;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.25;
+      cursor: pointer;
+    }
+
+    .check input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    .chart-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+      margin: 8px 0;
+    }
+
+    .chart-header p {
+      margin-bottom: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .badge strong { color: var(--ink); }
+
+    #plot {
+      height: 680px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .plot-note {
+      margin: 9px 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .lower-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .flat-panel, .reading-panel { min-width: 0; }
+
+    .flat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .flat-head p {
+      margin-bottom: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .inline-control { min-width: 180px; }
+
+    #flatPlot {
+      height: 420px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .reading-panel { padding: 14px; }
+
+    .reading-panel p, .metric-note p {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .reading-list {
+      display: grid;
+      gap: 9px;
+      margin-top: 10px;
+    }
+
+    .read-item {
+      border-left: 4px solid var(--accent);
+      padding-left: 10px;
+    }
+
+    .read-item strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .active-notes {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .metric-note {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--surface-soft);
+    }
+
+    .metric-note strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .metric-note p {
+      margin-bottom: 0;
+      font-size: 13px;
+    }
+
+    .data-table-wrap {
+      overflow-x: auto;
+      margin-bottom: 14px;
+    }
+
+    .table-head { padding: 14px 14px 0; }
+
+    .table-head p {
+      margin-bottom: 10px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th, td {
+      border-top: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      background: #f8fafc;
+    }
+
+    td { color: var(--ink); }
+
+    .glossary { padding: 12px 14px; }
+
+    .glossary summary {
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .glossary-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--surface-soft);
+    }
+
+    .glossary-item p {
+      margin-bottom: 0;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 13px;
+    }
+
+    .load-error {
+      display: grid;
+      place-items: center;
+      min-height: 260px;
+      padding: 18px;
+      color: var(--warn);
+      background: var(--warn-soft);
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1160px) {
+      .summary-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .lower-grid { grid-template-columns: 1fr; }
+      .glossary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 900px) {
+      .top, .filter-band, .explain-grid { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chart-header, .flat-head {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .badge { white-space: normal; }
+      #plot { height: 600px; }
+    }
+
+    @media (max-width: 640px) {
+      .page { padding: 16px 12px 28px; }
+      h1 { font-size: 29px; }
+      .summary-strip, .controls, .glossary-grid { grid-template-columns: 1fr; }
+      #plot { height: 540px; }
+      #flatPlot { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <div>
+        <p class="kicker">Market activity explorer</p>
+        <h1>Every dot is one market snapshot.</h1>
+        <p class="lede">
+          A dot represents one row from the source files: one timestamp, one Bid or Ask side, one strike level, the ES futures price, and the option-risk values calculated for that moment. The dot is a recorded market condition, not necessarily an executed trade.
+        </p>
+      </div>
+      <aside class="quick-read" id="quickRead" aria-live="polite"></aside>
+    </header>
+
+    <section class="summary-strip" id="summaryStrip" aria-label="Data summary"></section>
+
+    <section class="explain-grid" aria-label="How to read the dots">
+      <article class="explain-card">
+        <h2>1. Read one dot</h2>
+        <p>One dot means one timestamped snapshot. Nearby dots had similar values. A dense area means many snapshots looked alike.</p>
+      </article>
+      <article class="explain-card">
+        <h2>2. Read the axes</h2>
+        <p>The selected metrics decide left-to-right, front-to-back, and bottom-to-top position. Change one axis at a time when comparing patterns.</p>
+      </article>
+      <article class="explain-card">
+        <h2>3. Read the color</h2>
+        <p>Color can separate Bid from Ask, separate source files, or show whether a metric is low or high. Split colors usually mean different behavior.</p>
+      </article>
+    </section>
+
+    <section class="control-band" aria-label="Chart controls">
+      <div class="controls">
+        <div class="control">
+          <label for="preset">Starting view</label>
+          <select id="preset"></select>
+          <small>Begin here, then make small changes.</small>
+        </div>
+        <div class="control">
+          <label for="xAxis">Left to right</label>
+          <select id="xAxis"></select>
+          <small>X-axis position.</small>
+        </div>
+        <div class="control">
+          <label for="yAxis">Front to back</label>
+          <select id="yAxis"></select>
+          <small>Y-axis position.</small>
+        </div>
+        <div class="control">
+          <label for="zAxis">Bottom to top</label>
+          <select id="zAxis"></select>
+          <small>Z-axis position.</small>
+        </div>
+        <div class="control">
+          <label for="colorMode">Color means</label>
+          <select id="colorMode"></select>
+          <small>Groups or a low-to-high value scale.</small>
+        </div>
+        <div class="control">
+          <label for="pointLimit">Dots drawn</label>
+          <input id="pointLimit" type="range" />
+          <small id="limitHelp">The full dataset stays loaded. This only controls drawing speed.</small>
+        </div>
+        <div class="control">
+          <label for="pointLimitBox">Exact dot limit</label>
+          <input id="pointLimitBox" type="number" min="1" />
+          <small>Use the total loaded row count to draw everything.</small>
+        </div>
+        <div class="control">
+          <label for="pointSize">Dot size</label>
+          <input id="pointSize" type="range" min="1" max="7" step="1" value="2" />
+          <small>Smaller dots reveal dense areas better.</small>
+        </div>
+        <div class="control">
+          <label for="opacity">Dot transparency</label>
+          <input id="opacity" type="range" min="0.15" max="1" step="0.05" value="0.55" />
+          <small>More transparency shows overlapping dots.</small>
+        </div>
+      </div>
+      <div class="button-row">
+        <button class="primary" id="resetView" type="button">Reset 3D view</button>
+        <button id="drawAll" type="button">Draw all loaded dots</button>
+        <button id="drawDefault" type="button">Return to fast draw limit</button>
+      </div>
+    </section>
+
+    <section class="filter-band" aria-label="Filters">
+      <div>
+        <div class="filter-title">
+          <h2>Source files</h2>
+          <div class="filter-actions">
+            <button type="button" data-group="dataset" data-mode="all">All</button>
+            <button type="button" data-group="dataset" data-mode="none">None</button>
+          </div>
+        </div>
+        <div class="checks" id="datasetFilters"></div>
+      </div>
+      <div>
+        <div class="filter-title">
+          <h2>Market side</h2>
+          <div class="filter-actions">
+            <button type="button" data-group="side" data-mode="all">All</button>
+            <button type="button" data-group="side" data-mode="none">None</button>
+          </div>
+        </div>
+        <div class="checks" id="sideFilters"></div>
+      </div>
+    </section>
+
+    <section aria-label="3D chart">
+      <div class="chart-header">
+        <div>
+          <h2>3D point cloud</h2>
+          <p id="chartSentence"></p>
+        </div>
+        <div class="badge" id="shownBadge"></div>
+      </div>
+      <div id="plot"></div>
+      <p class="plot-note">
+        Mouse controls: drag to rotate, scroll to zoom, and right-drag to pan. When the cloud looks crowded, lower the dot limit or use the 2D check below.
+      </p>
+    </section>
+
+    <section class="lower-grid" aria-label="Reading support">
+      <div class="flat-panel">
+        <div class="flat-head">
+          <div>
+            <h2>2D check</h2>
+            <p>Use the flatter view to confirm a pattern before reading the full 3D shape.</p>
+          </div>
+          <div class="inline-control">
+            <label for="projection">Flat view</label>
+            <select id="projection"></select>
+          </div>
+        </div>
+        <div id="flatPlot"></div>
+      </div>
+      <aside class="reading-panel">
+        <h2>Current reading guide</h2>
+        <div id="readingGuide"></div>
+        <div class="active-notes" id="activeMetricNotes"></div>
+      </aside>
+    </section>
+
+    <section class="data-table-wrap" aria-label="Source file table">
+      <div class="table-head">
+        <h2>Source files included</h2>
+        <p>All source rows are loaded into this HTML when the builder runs with the default settings. The draw limit only changes how many loaded rows are plotted at once.</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Rows</th>
+            <th>Time covered</th>
+            <th>Bid / Ask mix</th>
+            <th>Average ES price</th>
+            <th>Average liquidity pressure</th>
+          </tr>
+        </thead>
+        <tbody id="sourceTable"></tbody>
+      </table>
+    </section>
+
+    <details class="glossary" open>
+      <summary>Plain-English metric glossary</summary>
+      <div class="glossary-grid" id="glossaryGrid"></div>
+    </details>
+  </div>
+  <script>
+    const DATA = __DATA_JSON__;
+    const META = __META_JSON__;
+
+    const METRICS = {
+      elapsed_sec: {
+        label: "Time Since Start",
+        short: "when the snapshot happened",
+        digits: 1,
+        plain: "Seconds after the first timestamp in the combined files.",
+        how: "Use it to see whether the pattern changes as the session moves forward."
+      },
+      spx_strike: {
+        label: "SPX Strike Level",
+        short: "the SPX option strike",
+        digits: 2,
+        plain: "The SPX option strike level attached to the row.",
+        how: "Use it to see where activity gathers across strike prices."
+      },
+      future_strike: {
+        label: "Futures Strike Level",
+        short: "the futures-linked strike",
+        digits: 2,
+        plain: "The futures-related strike value recorded for the same snapshot.",
+        how: "Use it to compare the futures-linked strike against the SPX strike."
+      },
+      mbo_pull: {
+        label: "Liquidity Pressure",
+        short: "order-book pulling and stacking pressure",
+        digits: 4,
+        plain: "A market-by-order pulling and stacking value. Here it works as a simple pressure reading from the order book.",
+        how: "Values near zero are calmer. Larger positive or negative values point to stronger order-book movement."
+      },
+      current_es_price: {
+        label: "ES Futures Price",
+        short: "the ES futures price",
+        digits: 2,
+        plain: "The ES futures price at the moment captured by the row.",
+        how: "Use it as the main price anchor for the snapshot."
+      },
+      call_delta: {
+        label: "Call Delta",
+        short: "call sensitivity to price movement",
+        digits: 4,
+        plain: "How much the call option value is expected to move when the underlying price moves by one point.",
+        how: "Higher absolute values mean stronger price sensitivity."
+      },
+      put_delta: {
+        label: "Put Delta",
+        short: "put sensitivity to price movement",
+        digits: 4,
+        plain: "How much the put option value is expected to move when the underlying price moves by one point.",
+        how: "Put delta is usually negative, so larger negative values mean stronger downside sensitivity."
+      },
+      call_gamma: {
+        label: "Gamma",
+        short: "how quickly delta changes",
+        digits: 6,
+        plain: "How quickly delta changes as the underlying price moves.",
+        how: "Higher gamma means the option's price sensitivity can change faster."
+      },
+      call_vega: {
+        label: "Vega",
+        short: "sensitivity to volatility",
+        digits: 4,
+        plain: "How much the option value is expected to move when implied volatility changes.",
+        how: "Higher vega means volatility changes matter more."
+      },
+      call_theta: {
+        label: "Theta",
+        short: "time-decay pressure",
+        digits: 4,
+        plain: "How much value is expected to decay as time passes, all else equal.",
+        how: "More negative theta means stronger time-decay pressure."
+      }
+    };
+
+    const AXIS_KEYS = [
+      "elapsed_sec",
+      "spx_strike",
+      "future_strike",
+      "mbo_pull",
+      "current_es_price",
+      "call_delta",
+      "put_delta",
+      "call_gamma",
+      "call_vega",
+      "call_theta"
+    ];
+
+    const COLOR_OPTIONS = {
+      side: "Bid / Ask side",
+      dataset: "Source file",
+      elapsed_sec: METRICS.elapsed_sec.label,
+      mbo_pull: METRICS.mbo_pull.label,
+      current_es_price: METRICS.current_es_price.label,
+      spx_strike: METRICS.spx_strike.label,
+      call_delta: METRICS.call_delta.label,
+      put_delta: METRICS.put_delta.label,
+      call_gamma: METRICS.call_gamma.label,
+      call_vega: METRICS.call_vega.label,
+      call_theta: METRICS.call_theta.label
+    };
+
+    const PRESETS = {
+      beginner: {
+        label: "Beginner: time, strike, pressure",
+        x: "elapsed_sec",
+        y: "spx_strike",
+        z: "mbo_pull",
+        color: "side",
+        note: "Start with time, strike level, and liquidity pressure. Color separates Bid and Ask."
+      },
+      price: {
+        label: "Price path: time and ES price",
+        x: "elapsed_sec",
+        y: "current_es_price",
+        z: "spx_strike",
+        color: "dataset",
+        note: "Compare how each source file moves through time, price, and strike level."
+      },
+      strike: {
+        label: "Strike comparison",
+        x: "current_es_price",
+        y: "spx_strike",
+        z: "future_strike",
+        color: "side",
+        note: "Compare ES price, SPX strike, and futures strike in one view."
+      },
+      risk: {
+        label: "Option risk: delta, gamma, theta",
+        x: "spx_strike",
+        y: "call_delta",
+        z: "call_theta",
+        color: "call_gamma",
+        note: "Use this after the basic view to inspect option-risk shape across strikes."
+      },
+      liquidity: {
+        label: "Liquidity pressure by price",
+        x: "current_es_price",
+        y: "spx_strike",
+        z: "mbo_pull",
+        color: "mbo_pull",
+        note: "Find where order-book pressure becomes stronger around price and strike levels."
+      }
+    };
+
+    const PROJECTIONS = {
+      xy: "Left/right vs front/back",
+      xz: "Left/right vs bottom/top",
+      yz: "Front/back vs bottom/top"
+    };
+
+    const DATASET_COLORS = ["#087f5b", "#c2412d", "#2f6f9f", "#a65000", "#5f6f52", "#8a5a83", "#4d6466", "#8d6e63"];
+    const SIDE_COLORS = { Bid: "#087f5b", Ask: "#c2412d" };
+    const NUMERIC_SCALE = [[0, "#2f6f9f"], [0.5, "#f2c94c"], [1, "#c2412d"]];
+    const DEFAULT_CAMERA = { eye: { x: 1.45, y: 1.35, z: 0.95 } };
+
+    const ids = {
+      quickRead: document.getElementById("quickRead"),
+      summaryStrip: document.getElementById("summaryStrip"),
+      preset: document.getElementById("preset"),
+      xAxis: document.getElementById("xAxis"),
+      yAxis: document.getElementById("yAxis"),
+      zAxis: document.getElementById("zAxis"),
+      colorMode: document.getElementById("colorMode"),
+      pointLimit: document.getElementById("pointLimit"),
+      pointLimitBox: document.getElementById("pointLimitBox"),
+      pointSize: document.getElementById("pointSize"),
+      opacity: document.getElementById("opacity"),
+      resetView: document.getElementById("resetView"),
+      drawAll: document.getElementById("drawAll"),
+      drawDefault: document.getElementById("drawDefault"),
+      datasetFilters: document.getElementById("datasetFilters"),
+      sideFilters: document.getElementById("sideFilters"),
+      chartSentence: document.getElementById("chartSentence"),
+      shownBadge: document.getElementById("shownBadge"),
+      plot: document.getElementById("plot"),
+      flatPlot: document.getElementById("flatPlot"),
+      projection: document.getElementById("projection"),
+      readingGuide: document.getElementById("readingGuide"),
+      activeMetricNotes: document.getElementById("activeMetricNotes"),
+      sourceTable: document.getElementById("sourceTable"),
+      glossaryGrid: document.getElementById("glossaryGrid"),
+      limitHelp: document.getElementById("limitHelp")
+    };
+
+    let renderTimer = null;
+    let defaultDrawLimit = 1;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function isFiniteNumber(value) {
+      return typeof value === "number" && Number.isFinite(value);
+    }
+
+    function formatNumber(value) {
+      if (!isFiniteNumber(Number(value))) return "n/a";
+      return new Intl.NumberFormat("en-US").format(Number(value));
+    }
+
+    function formatMetric(key, value) {
+      if (!isFiniteNumber(Number(value))) return "n/a";
+      const digits = METRICS[key] ? METRICS[key].digits : 2;
+      return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(Number(value));
+    }
+
+    function formatSigned(value, digits) {
+      if (!isFiniteNumber(Number(value))) return "n/a";
+      const number = Number(value);
+      const prefix = number > 0 ? "+" : "";
+      return prefix + new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(number);
+    }
+
+    function formatTimestamp(value) {
+      if (!value) return "n/a";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function formatDuration(seconds) {
+      const value = Number(seconds);
+      if (!Number.isFinite(value) || value < 0) return "n/a";
+      const total = Math.round(value);
+      const days = Math.floor(total / 86400);
+      const hours = Math.floor((total % 86400) / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      const parts = [];
+      if (days) parts.push(days + "d");
+      if (hours) parts.push(hours + "h");
+      if (minutes || parts.length === 0) parts.push(minutes + "m");
+      return parts.join(" ");
+    }
+
+    function fillSelect(select, options, selected) {
+      select.innerHTML = "";
+      Object.entries(options).forEach(([value, label]) => {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = label;
+        select.appendChild(opt);
+      });
+      if (selected && options[selected]) select.value = selected;
+    }
+
+    function metricOptions() {
+      return Object.fromEntries(AXIS_KEYS.map((key) => [key, METRICS[key].label]));
+    }
+
+    function presetOptions() {
+      const options = Object.fromEntries(Object.entries(PRESETS).map(([key, value]) => [key, value.label]));
+      options.custom = "Custom view";
+      return options;
+    }
+
+    function sideText(label) {
+      if (String(label).toLowerCase() === "bid") return "Bid";
+      if (String(label).toLowerCase() === "ask") return "Ask";
+      return label;
+    }
+
+    function createChecks(container, labels, prefix) {
+      container.innerHTML = "";
+      labels.forEach((label, index) => {
+        const id = prefix + "-" + index;
+        const wrapper = document.createElement("label");
+        wrapper.className = "check";
+        wrapper.setAttribute("for", id);
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.id = id;
+        input.checked = true;
+
+        const span = document.createElement("span");
+        span.textContent = prefix === "side" ? sideText(label) : label;
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(span);
+        container.appendChild(wrapper);
+      });
+    }
+
+    function checkedSet(prefix, count) {
+      const selected = new Set();
+      for (let index = 0; index < count; index++) {
+        const input = document.getElementById(prefix + "-" + index);
+        if (input && input.checked) selected.add(index);
+      }
+      return selected;
+    }
+
+    function setChecks(prefix, count, checked) {
+      for (let index = 0; index < count; index++) {
+        const input = document.getElementById(prefix + "-" + index);
+        if (input) input.checked = checked;
+      }
+    }
+
+    function groupIndices(indices, getKey) {
+      const grouped = new Map();
+      for (let index = 0; index < indices.length; index++) {
+        const rowIndex = indices[index];
+        const key = getKey(rowIndex);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(rowIndex);
+      }
+      return grouped;
+    }
+
+    function evenlySpacedSubset(indices, take) {
+      if (take <= 0) return [];
+      if (take >= indices.length) return indices.slice();
+      const result = new Array(take);
+      const step = indices.length / take;
+      for (let index = 0; index < take; index++) {
+        result[index] = indices[Math.min(indices.length - 1, Math.floor(index * step))];
+      }
+      return result;
+    }
+
+    function sampleIndices(indices, limit) {
+      const max = Number(limit);
+      if (!Number.isFinite(max) || max <= 0 || max >= indices.length) return indices.slice();
+
+      const grouped = groupIndices(indices, (rowIndex) => DATA.dataset[rowIndex] + "|" + DATA.side[rowIndex]);
+      const groups = [];
+      let used = 0;
+      grouped.forEach((items) => {
+        const raw = (items.length * max) / indices.length;
+        const take = Math.floor(raw);
+        groups.push({ items, take, remainder: raw - take });
+        used += take;
+      });
+
+      groups.sort((a, b) => b.remainder - a.remainder);
+      let cursor = 0;
+      while (used < max && groups.length > 0) {
+        const group = groups[cursor % groups.length];
+        if (group.take < group.items.length) {
+          group.take += 1;
+          used += 1;
+        }
+        cursor += 1;
+        if (cursor > groups.length * 3 && groups.every((groupItem) => groupItem.take >= groupItem.items.length)) break;
+      }
+
+      const sampled = [];
+      groups.forEach((group) => {
+        sampled.push(...evenlySpacedSubset(group.items, group.take));
+      });
+      sampled.sort((a, b) => a - b);
+      return sampled;
+    }
+
+    function buildArray(indices, key) {
+      const result = new Array(indices.length);
+      for (let index = 0; index < indices.length; index++) {
+        result[index] = DATA[key][indices[index]];
+      }
+      return result;
+    }
+
+    function buildCustomData(indices) {
+      const result = new Array(indices.length);
+      for (let index = 0; index < indices.length; index++) {
+        const rowIndex = indices[index];
+        result[index] = [
+          META.dataset_labels[DATA.dataset[rowIndex]],
+          sideText(META.side_labels[DATA.side[rowIndex]]),
+          formatTimestamp(DATA.timestamp[rowIndex]),
+          formatMetric("current_es_price", DATA.current_es_price[rowIndex]),
+          formatMetric("spx_strike", DATA.spx_strike[rowIndex]),
+          formatMetric("future_strike", DATA.future_strike[rowIndex]),
+          formatSigned(DATA.mbo_pull[rowIndex], 4),
+          formatMetric("call_delta", DATA.call_delta[rowIndex]),
+          formatMetric("put_delta", DATA.put_delta[rowIndex]),
+          formatMetric("call_gamma", DATA.call_gamma[rowIndex]),
+          formatMetric("call_theta", DATA.call_theta[rowIndex])
+        ];
+      }
+      return result;
+    }
+
+    function hoverTemplate(xLabel, yLabel, zLabel) {
+      return [
+        "<b>%{customdata[0]}</b>",
+        "Side: %{customdata[1]}",
+        "Time: %{customdata[2]}",
+        "",
+        xLabel + ": %{x}",
+        yLabel + ": %{y}",
+        zLabel + ": %{z}",
+        "",
+        "ES price: %{customdata[3]}",
+        "SPX strike: %{customdata[4]}",
+        "Futures strike: %{customdata[5]}",
+        "Liquidity pressure: %{customdata[6]}",
+        "Call delta: %{customdata[7]}",
+        "Put delta: %{customdata[8]}",
+        "Gamma: %{customdata[9]}",
+        "Theta: %{customdata[10]}",
+        "<extra></extra>"
+      ].join("<br>");
+    }
+
+    function colorForDataset(index) {
+      return DATASET_COLORS[index % DATASET_COLORS.length];
+    }
+
+    function colorForSide(label, index) {
+      return SIDE_COLORS[label] || DATASET_COLORS[index % DATASET_COLORS.length];
+    }
+
+    function colorExplanation(mode) {
+      if (mode === "side") return "Color separates Bid and Ask. Bid is the buyer-side quote; Ask is the seller-side quote.";
+      if (mode === "dataset") return "Color separates the source files, so you can compare sessions.";
+      const metric = METRICS[mode];
+      return "Color is a low-to-high scale for " + metric.label + ".";
+    }
+
+    function getFilteredIndices() {
+      const selectedDatasets = checkedSet("dataset", META.dataset_labels.length);
+      const selectedSides = checkedSet("side", META.side_labels.length);
+      const xKey = ids.xAxis.value;
+      const yKey = ids.yAxis.value;
+      const zKey = ids.zAxis.value;
+      const colorKey = ids.colorMode.value;
+      const rows = DATA.timestamp.length;
+      const filtered = [];
+
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        if (!selectedDatasets.has(DATA.dataset[rowIndex])) continue;
+        if (!selectedSides.has(DATA.side[rowIndex])) continue;
+        if (!isFiniteNumber(DATA[xKey][rowIndex])) continue;
+        if (!isFiniteNumber(DATA[yKey][rowIndex])) continue;
+        if (!isFiniteNumber(DATA[zKey][rowIndex])) continue;
+        if (colorKey !== "side" && colorKey !== "dataset" && !isFiniteNumber(DATA[colorKey][rowIndex])) continue;
+        filtered.push(rowIndex);
+      }
+
+      return filtered;
+    }
+
+    function clampLimit(value) {
+      const max = Math.max(1, Number(ids.pointLimit.max) || 1);
+      const min = 1;
+      const parsed = Math.round(Number(value));
+      if (!Number.isFinite(parsed)) return defaultDrawLimit;
+      return Math.max(min, Math.min(max, parsed));
+    }
+
+    function setLimit(value) {
+      const next = clampLimit(value);
+      ids.pointLimit.value = String(next);
+      ids.pointLimitBox.value = String(next);
+    }
+
+    function currentProjectionKeys() {
+      if (ids.projection.value === "xz") return [ids.xAxis.value, ids.zAxis.value];
+      if (ids.projection.value === "yz") return [ids.yAxis.value, ids.zAxis.value];
+      return [ids.xAxis.value, ids.yAxis.value];
+    }
+
+    function traceFor3dGroup(name, indices, marker) {
+      const xKey = ids.xAxis.value;
+      const yKey = ids.yAxis.value;
+      const zKey = ids.zAxis.value;
+      return {
+        type: "scatter3d",
+        mode: "markers",
+        name,
+        x: buildArray(indices, xKey),
+        y: buildArray(indices, yKey),
+        z: buildArray(indices, zKey),
+        customdata: buildCustomData(indices),
+        hovertemplate: hoverTemplate(METRICS[xKey].label, METRICS[yKey].label, METRICS[zKey].label),
+        marker
+      };
+    }
+
+    function traceFor2dGroup(name, indices, marker, xKey, yKey) {
+      return {
+        type: "scattergl",
+        mode: "markers",
+        name,
+        x: buildArray(indices, xKey),
+        y: buildArray(indices, yKey),
+        customdata: buildCustomData(indices),
+        hovertemplate: hoverTemplate(METRICS[xKey].label, METRICS[yKey].label, "Selected 3D height"),
+        marker
+      };
+    }
+
+    function build3dTraces(indices) {
+      const pointSize = Number(ids.pointSize.value) || 2;
+      const opacity = Number(ids.opacity.value) || 0.55;
+      const colorMode = ids.colorMode.value;
+
+      if (colorMode === "side") {
+        const grouped = groupIndices(indices, (rowIndex) => DATA.side[rowIndex]);
+        const traces = [];
+        grouped.forEach((items, sideIndex) => {
+          const label = sideText(META.side_labels[sideIndex]);
+          traces.push(traceFor3dGroup(label, items, {
+            size: pointSize,
+            opacity,
+            color: colorForSide(label, sideIndex)
+          }));
+        });
+        return traces;
+      }
+
+      if (colorMode === "dataset") {
+        const grouped = groupIndices(indices, (rowIndex) => DATA.dataset[rowIndex]);
+        const traces = [];
+        grouped.forEach((items, datasetIndex) => {
+          traces.push(traceFor3dGroup(META.dataset_labels[datasetIndex], items, {
+            size: pointSize,
+            opacity,
+            color: colorForDataset(datasetIndex)
+          }));
+        });
+        return traces;
+      }
+
+      return [traceFor3dGroup(METRICS[colorMode].label, indices, {
+        size: pointSize,
+        opacity,
+        color: buildArray(indices, colorMode),
+        colorscale: NUMERIC_SCALE,
+        colorbar: { title: METRICS[colorMode].label, thickness: 14 },
+        showscale: true
+      })];
+    }
+
+    function build2dTraces(indices) {
+      const pointSize = Math.max(3, (Number(ids.pointSize.value) || 2) + 1);
+      const opacity = Number(ids.opacity.value) || 0.55;
+      const colorMode = ids.colorMode.value;
+      const [xKey, yKey] = currentProjectionKeys();
+
+      if (colorMode === "side") {
+        const grouped = groupIndices(indices, (rowIndex) => DATA.side[rowIndex]);
+        const traces = [];
+        grouped.forEach((items, sideIndex) => {
+          const label = sideText(META.side_labels[sideIndex]);
+          traces.push(traceFor2dGroup(label, items, {
+            size: pointSize,
+            opacity,
+            color: colorForSide(label, sideIndex)
+          }, xKey, yKey));
+        });
+        return traces;
+      }
+
+      if (colorMode === "dataset") {
+        const grouped = groupIndices(indices, (rowIndex) => DATA.dataset[rowIndex]);
+        const traces = [];
+        grouped.forEach((items, datasetIndex) => {
+          traces.push(traceFor2dGroup(META.dataset_labels[datasetIndex], items, {
+            size: pointSize,
+            opacity,
+            color: colorForDataset(datasetIndex)
+          }, xKey, yKey));
+        });
+        return traces;
+      }
+
+      return [traceFor2dGroup(METRICS[colorMode].label, indices, {
+        size: pointSize,
+        opacity,
+        color: buildArray(indices, colorMode),
+        colorscale: NUMERIC_SCALE,
+        colorbar: { title: METRICS[colorMode].label, thickness: 14 },
+        showscale: true
+      }, xKey, yKey)];
+    }
+
+    function layout3d() {
+      const xKey = ids.xAxis.value;
+      const yKey = ids.yAxis.value;
+      const zKey = ids.zAxis.value;
+      return {
+        margin: { l: 0, r: 0, b: 0, t: 8 },
+        paper_bgcolor: "#ffffff",
+        font: { family: "Aptos, Segoe UI, Tahoma, Arial, sans-serif", color: "#202428", size: 12 },
+        legend: { orientation: "h", x: 0, y: 1.04 },
+        scene: {
+          xaxis: { title: METRICS[xKey].label, gridcolor: "#d7dee6", zerolinecolor: "#aab4bf", backgroundcolor: "#ffffff" },
+          yaxis: { title: METRICS[yKey].label, gridcolor: "#d7dee6", zerolinecolor: "#aab4bf", backgroundcolor: "#ffffff" },
+          zaxis: { title: METRICS[zKey].label, gridcolor: "#d7dee6", zerolinecolor: "#aab4bf", backgroundcolor: "#ffffff" },
+          camera: DEFAULT_CAMERA,
+          aspectmode: "cube"
+        }
+      };
+    }
+
+    function layout2d() {
+      const [xKey, yKey] = currentProjectionKeys();
+      return {
+        margin: { l: 62, r: 20, b: 54, t: 12 },
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#ffffff",
+        font: { family: "Aptos, Segoe UI, Tahoma, Arial, sans-serif", color: "#202428", size: 12 },
+        legend: { orientation: "h", x: 0, y: 1.12 },
+        xaxis: { title: METRICS[xKey].label, gridcolor: "#e2e8ef", zerolinecolor: "#aab4bf" },
+        yaxis: { title: METRICS[yKey].label, gridcolor: "#e2e8ef", zerolinecolor: "#aab4bf" }
+      };
+    }
+
+    function matchingPresetKey() {
+      return Object.entries(PRESETS).find(([, preset]) => (
+        preset.x === ids.xAxis.value &&
+        preset.y === ids.yAxis.value &&
+        preset.z === ids.zAxis.value &&
+        preset.color === ids.colorMode.value
+      ))?.[0] || "custom";
+    }
+
+    function applyPreset(key, shouldRender) {
+      const preset = PRESETS[key];
+      if (!preset) return;
+      ids.xAxis.value = preset.x;
+      ids.yAxis.value = preset.y;
+      ids.zAxis.value = preset.z;
+      ids.colorMode.value = preset.color;
+      ids.preset.value = key;
+      if (shouldRender) scheduleRender();
+    }
+
+    function updateSummaryStrip() {
+      const sideParts = (META.side_labels || []).map((label) => {
+        const count = META.overall_side_counts && META.overall_side_counts[label] ? META.overall_side_counts[label] : 0;
+        return sideText(label) + ": " + formatNumber(count);
+      });
+      const loadedNote = META.rows_embedded === META.rows_total
+        ? "Every source row is available in this page."
+        : "A sampled row set is available in this page.";
+
+      const tiles = [
+        ["Source rows", formatNumber(META.rows_total), "Rows found across the CSV files."],
+        ["Rows loaded", formatNumber(META.rows_embedded), loadedNote],
+        ["Files", formatNumber((META.dataset_labels || []).length), "Separate sessions included."],
+        ["Time span", formatDuration(META.time_span_seconds), formatTimestamp(META.timestamp_start) + " to " + formatTimestamp(META.timestamp_end)],
+        ["Bid / Ask", sideParts.join(" | "), "Market side mix across all files."]
+      ];
+
+      ids.summaryStrip.innerHTML = tiles.map(([label, value, note]) => (
+        '<div class="tile">' +
+          '<div class="tile-label">' + escapeHtml(label) + '</div>' +
+          '<div class="tile-value">' + escapeHtml(value) + '</div>' +
+          '<div class="tile-note">' + escapeHtml(note) + '</div>' +
+        '</div>'
+      )).join("");
+    }
+
+    function updateSourceTable() {
+      const rows = (META.dataset_summaries || []).map((info) => {
+        const sideMix = (META.side_labels || []).map((label) => {
+          const count = info.side_counts && info.side_counts[label] ? info.side_counts[label] : 0;
+          const share = info.rows_source ? Math.round((count / info.rows_source) * 100) : 0;
+          return escapeHtml(sideText(label) + " " + formatNumber(count) + " (" + share + "%)");
+        }).join("<br>");
+
+        return [
+          "<tr>",
+          "<td><strong>" + escapeHtml(info.label) + "</strong><br>" + escapeHtml(info.source_name) + "</td>",
+          "<td>" + escapeHtml(formatNumber(info.rows_source)) + "</td>",
+          "<td>" + escapeHtml(formatTimestamp(info.timestamp_start)) + "<br>to " + escapeHtml(formatTimestamp(info.timestamp_end)) + "<br>" + escapeHtml(formatDuration(info.duration_seconds)) + "</td>",
+          "<td>" + sideMix + "</td>",
+          "<td>" + escapeHtml(formatMetric("current_es_price", info.avg_current_es_price)) + "</td>",
+          "<td>" + escapeHtml(formatSigned(info.avg_mbo_pull, 4)) + "</td>",
+          "</tr>"
+        ].join("");
+      });
+      ids.sourceTable.innerHTML = rows.join("");
+    }
+
+    function updateGlossary() {
+      ids.glossaryGrid.innerHTML = AXIS_KEYS.map((key) => {
+        const metric = METRICS[key];
+        return [
+          '<div class="glossary-item">',
+          '<h3>' + escapeHtml(metric.label) + '</h3>',
+          '<p>' + escapeHtml(metric.plain + " " + metric.how) + '</p>',
+          '</div>'
+        ].join("");
+      }).join("");
+    }
+
+    function updateNarrative(filtered, shown) {
+      const presetKey = matchingPresetKey();
+      ids.preset.value = presetKey;
+      const presetNote = presetKey === "custom" ? "Custom view based on the current controls." : PRESETS[presetKey].note;
+      const percent = filtered.length ? Math.round((shown.length / filtered.length) * 100) : 0;
+
+      ids.quickRead.innerHTML = [
+        '<div class="quick-label">Current read</div>',
+        '<p><strong>' + escapeHtml(formatNumber(shown.length)) + '</strong> dots are drawn from <strong>' + escapeHtml(formatNumber(filtered.length)) + '</strong> matching loaded rows.</p>',
+        '<p>' + escapeHtml(presetNote) + '</p>'
+      ].join("");
+
+      ids.chartSentence.textContent = (
+        METRICS[ids.xAxis.value].label + " moves left to right, " +
+        METRICS[ids.yAxis.value].label + " moves front to back, and " +
+        METRICS[ids.zAxis.value].label + " moves bottom to top. " +
+        colorExplanation(ids.colorMode.value)
+      );
+
+      ids.shownBadge.innerHTML = (
+        '<strong>' + escapeHtml(formatNumber(shown.length)) + '</strong> drawn | ' +
+        escapeHtml(formatNumber(filtered.length)) + ' matching | ' +
+        escapeHtml(formatNumber(META.rows_embedded)) + ' loaded'
+      );
+
+      ids.limitHelp.textContent = (
+        "Drawing " + formatNumber(shown.length) + " of " + formatNumber(filtered.length) +
+        " matching rows (" + percent + "%). Loaded data is unchanged."
+      );
+
+      const colorStory = colorExplanation(ids.colorMode.value);
+      ids.readingGuide.innerHTML = [
+        '<p>' + escapeHtml(colorStory) + '</p>',
+        '<div class="reading-list">',
+        '<div class="read-item"><strong>Clusters</strong><span>Many dots close together mean many snapshots had similar values.</span></div>',
+        '<div class="read-item"><strong>Slopes</strong><span>A rising or falling cloud means the selected metrics are moving together.</span></div>',
+        '<div class="read-item"><strong>Gaps</strong><span>Empty space between groups means the market moved through fewer snapshots there.</span></div>',
+        '</div>'
+      ].join("");
+
+      const active = [
+        ["Left to right", ids.xAxis.value],
+        ["Front to back", ids.yAxis.value],
+        ["Bottom to top", ids.zAxis.value]
+      ];
+
+      const notes = active.map(([role, key]) => {
+        const metric = METRICS[key];
+        return [
+          '<div class="metric-note">',
+          '<strong>' + escapeHtml(role + ": " + metric.label) + '</strong>',
+          '<p>' + escapeHtml(metric.plain + " " + metric.how) + '</p>',
+          '</div>'
+        ].join("");
+      });
+
+      if (ids.colorMode.value === "side" || ids.colorMode.value === "dataset") {
+        notes.push([
+          '<div class="metric-note">',
+          '<strong>Color: ' + escapeHtml(COLOR_OPTIONS[ids.colorMode.value]) + '</strong>',
+          '<p>' + escapeHtml(colorStory) + '</p>',
+          '</div>'
+        ].join(""));
+      } else {
+        const metric = METRICS[ids.colorMode.value];
+        notes.push([
+          '<div class="metric-note">',
+          '<strong>Color: ' + escapeHtml(metric.label) + '</strong>',
+          '<p>' + escapeHtml(metric.plain + " Low values use the cool end of the scale; high values use the warm end.") + '</p>',
+          '</div>'
+        ].join(""));
+      }
+
+      ids.activeMetricNotes.innerHTML = notes.join("");
+    }
+
+    function showPlotError(message) {
+      const html = '<div class="load-error">' + escapeHtml(message) + '</div>';
+      ids.plot.innerHTML = html;
+      ids.flatPlot.innerHTML = html;
+    }
+
+    function render() {
+      const filtered = getFilteredIndices();
+      const limit = clampLimit(ids.pointLimitBox.value || ids.pointLimit.value);
+      setLimit(limit);
+      const shown = sampleIndices(filtered, limit);
+
+      updateNarrative(filtered, shown);
+
+      if (typeof Plotly === "undefined") {
+        showPlotError("The chart library did not load. Reopen this file while connected to the internet so Plotly can load from its CDN.");
+        return;
+      }
+
+      if (shown.length === 0) {
+        Plotly.react(ids.plot, [], layout3d(), { responsive: true, displaylogo: false });
+        Plotly.react(ids.flatPlot, [], layout2d(), { responsive: true, displaylogo: false });
+        return;
+      }
+
+      Plotly.react(ids.plot, build3dTraces(shown), layout3d(), {
+        responsive: true,
+        displaylogo: false,
+        scrollZoom: true
+      });
+      Plotly.react(ids.flatPlot, build2dTraces(shown), layout2d(), {
+        responsive: true,
+        displaylogo: false,
+        scrollZoom: true
+      });
+    }
+
+    function scheduleRender() {
+      window.clearTimeout(renderTimer);
+      renderTimer = window.setTimeout(render, 40);
+    }
+
+    function initialize() {
+      const axisOptions = metricOptions();
+      fillSelect(ids.preset, presetOptions(), "beginner");
+      fillSelect(ids.xAxis, axisOptions, PRESETS.beginner.x);
+      fillSelect(ids.yAxis, axisOptions, PRESETS.beginner.y);
+      fillSelect(ids.zAxis, axisOptions, PRESETS.beginner.z);
+      fillSelect(ids.colorMode, COLOR_OPTIONS, PRESETS.beginner.color);
+      fillSelect(ids.projection, PROJECTIONS, "xy");
+
+      createChecks(ids.datasetFilters, META.dataset_labels || [], "dataset");
+      createChecks(ids.sideFilters, META.side_labels || [], "side");
+
+      const loadedRows = Math.max(1, Number(META.rows_embedded) || DATA.timestamp.length || 1);
+      defaultDrawLimit = Math.min(loadedRows, Number(META.default_render_points) || 30000);
+      const step = loadedRows >= 500000 ? 10000 : loadedRows >= 100000 ? 2500 : loadedRows >= 20000 ? 1000 : 100;
+      ids.pointLimit.min = "1";
+      ids.pointLimit.max = String(loadedRows);
+      ids.pointLimit.step = String(step);
+      ids.pointLimitBox.max = String(loadedRows);
+      ids.pointLimitBox.step = String(step);
+      setLimit(defaultDrawLimit);
+
+      updateSummaryStrip();
+      updateSourceTable();
+      updateGlossary();
+
+      ids.preset.addEventListener("change", () => {
+        if (ids.preset.value === "custom") {
+          scheduleRender();
+        } else {
+          applyPreset(ids.preset.value, true);
+        }
+      });
+
+      [ids.xAxis, ids.yAxis, ids.zAxis, ids.colorMode, ids.projection].forEach((element) => {
+        element.addEventListener("change", scheduleRender);
+      });
+
+      ids.pointLimit.addEventListener("input", () => {
+        setLimit(ids.pointLimit.value);
+        scheduleRender();
+      });
+      ids.pointLimitBox.addEventListener("input", () => {
+        setLimit(ids.pointLimitBox.value);
+        scheduleRender();
+      });
+      [ids.pointSize, ids.opacity].forEach((element) => {
+        element.addEventListener("input", scheduleRender);
+      });
+
+      ids.drawAll.addEventListener("click", () => {
+        setLimit(loadedRows);
+        scheduleRender();
+      });
+      ids.drawDefault.addEventListener("click", () => {
+        setLimit(defaultDrawLimit);
+        scheduleRender();
+      });
+      ids.resetView.addEventListener("click", () => {
+        if (typeof Plotly !== "undefined") {
+          Plotly.relayout(ids.plot, { "scene.camera": DEFAULT_CAMERA });
+        }
+      });
+
+      document.querySelectorAll("[data-group][data-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const group = button.getAttribute("data-group");
+          const mode = button.getAttribute("data-mode");
+          if (group === "dataset") setChecks("dataset", (META.dataset_labels || []).length, mode === "all");
+          if (group === "side") setChecks("side", (META.side_labels || []).length, mode === "all");
+          scheduleRender();
+        });
+      });
+
+      (META.dataset_labels || []).forEach((_, index) => {
+        const input = document.getElementById("dataset-" + index);
+        if (input) input.addEventListener("change", scheduleRender);
+      });
+      (META.side_labels || []).forEach((_, index) => {
+        const input = document.getElementById("side-" + index);
+        if (input) input.addEventListener("change", scheduleRender);
+      });
+
+      render();
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
