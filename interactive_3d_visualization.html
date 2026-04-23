@@ -307,6 +307,48 @@
 
     .badge strong { color: var(--ink); }
 
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .chart-legend .legend-title {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .chart-legend .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink);
+    }
+
+    .chart-legend .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
+    }
+
+    .chart-legend .legend-gradient {
+      width: 140px;
+      height: 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: linear-gradient(to right, #2f6f9f 0%, #f2c94c 50%, #c2412d 100%);
+    }
+
     #plot {
       height: 680px;
       border: 1px solid var(--line);
@@ -616,6 +658,7 @@
         </div>
         <div class="badge" id="shownBadge"></div>
       </div>
+      <div id="chartLegend" class="chart-legend" aria-label="Color legend"></div>
       <div id="plot"></div>
       <p class="plot-note">
         Mouse controls: drag to rotate, scroll to zoom, and right-drag to pan. When the cloud looks crowded, lower the dot limit or use the 2D check below.
@@ -849,6 +892,7 @@
       flatPlot: document.getElementById("flatPlot"),
       projection: document.getElementById("projection"),
       readingGuide: document.getElementById("readingGuide"),
+      chartLegend: document.getElementById("chartLegend"),
       activeMetricNotes: document.getElementById("activeMetricNotes"),
       sourceTable: document.getElementById("sourceTable"),
       glossaryGrid: document.getElementById("glossaryGrid"),
@@ -1101,6 +1145,36 @@
       if (mode === "dataset") return "Color separates the source files, so you can compare sessions.";
       const metric = METRICS[mode];
       return "Color is a low-to-high scale for " + metric.label + ".";
+    }
+
+    function renderLegend(mode) {
+      const parts = ['<span class="legend-title">Legend:</span>'];
+      if (mode === "side") {
+        META.side_labels.forEach((label, index) => {
+          const pretty = sideText(label);
+          const color = colorForSide(pretty, index);
+          parts.push(
+            '<span class="legend-item"><span class="legend-swatch" style="background:' +
+            color + '"></span>' + escapeHtml(pretty) + '</span>'
+          );
+        });
+      } else if (mode === "dataset") {
+        META.dataset_labels.forEach((label, index) => {
+          const color = colorForDataset(index);
+          parts.push(
+            '<span class="legend-item"><span class="legend-swatch" style="background:' +
+            color + '"></span>' + escapeHtml(label) + '</span>'
+          );
+        });
+      } else {
+        const metric = METRICS[mode];
+        parts.push(
+          '<span class="legend-item">low</span>' +
+          '<span class="legend-gradient" role="img" aria-label="low to high color scale"></span>' +
+          '<span class="legend-item">high ' + escapeHtml(metric.label) + '</span>'
+        );
+      }
+      ids.chartLegend.innerHTML = parts.join("");
     }
 
     function getFilteredIndices() {
@@ -1402,6 +1476,8 @@
         "Drawing " + formatNumber(shown.length) + " of " + formatNumber(filtered.length) +
         " matching rows (" + percent + "%). Loaded data is unchanged."
       );
+
+      renderLegend(ids.colorMode.value);
 
       const colorStory = colorExplanation(ids.colorMode.value);
       ids.readingGuide.innerHTML = [
