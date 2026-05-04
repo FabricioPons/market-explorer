@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Market Explorer System Poster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c1117;
+      --surface: #141c25;
+      --surface2: #1a2535;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --ink: #e8edf3;
+      --muted: #7a8fa8;
+      --green: #0d9e70;
+      --green-dim: #087f5b;
+      --green-glow: rgba(13,158,112,0.15);
+      --amber: #f2c94c;
+      --amber-dim: rgba(242,201,76,0.15);
+      --blue: #4a9edd;
+      --blue-dim: rgba(74,158,221,0.13);
+      --mono: 'DM Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      font-family: var(--sans);
+      overflow: hidden;
+    }
+
+    /* STAGE */
+    #stage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+
+    #canvas {
+      width: 1920px;
+      height: 1080px;
+      transform-origin: center center;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    /* SLIDES */
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      background: var(--bg);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* grid texture */
+    .slide::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* glow blobs */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+    }
+    .blob-green { width: 700px; height: 700px; background: #0d9e70; top: -200px; left: -150px; opacity: 0.2; }
+    .blob-amber { width: 500px; height: 500px; background: #f2c94c; bottom: -200px; right: 300px; opacity: 0.1; }
+    .blob-blue  { width: 450px; height: 450px; background: #4a9edd; top: 100px; right: -100px; opacity: 0.12; }
+    .blob-amber2 { width: 600px; height: 600px; background: #f2c94c; top: -150px; right: 200px; opacity: 0.12; }
+    .blob-green2 { width: 400px; height: 400px; background: #0d9e70; bottom: -100px; left: 400px; opacity: 0.1; }
+
+    /* HEADER */
+    .header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 32px 72px 26px;
+      border-bottom: 1px solid var(--border2);
+      background: rgba(12,17,23,0.75);
+      backdrop-filter: blur(12px);
+    }
+
+    .header-left { display: flex; flex-direction: column; gap: 6px; }
+
+    .kicker {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--green);
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .kicker.amber { color: var(--amber); }
+
+    .slide-title {
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+      line-height: 1;
+    }
+
+    .slide-title .accent-green { color: var(--green); }
+    .slide-title .accent-amber { color: var(--amber); }
+
+    .header-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 6px 12px;
+    }
+
+    /* BODY */
+    .body {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 48px 72px 32px;
+      gap: 28px;
+      min-height: 0;
+    }
+
+    /* STEPS GRID — 4 across */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      flex: 1;
+    }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 28px 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .step-card.green::before { background: linear-gradient(90deg, var(--green), transparent); }
+    .step-card.amber::before { background: linear-gradient(90deg, var(--amber), transparent); }
+
+    .step-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .step-num {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .step-num.green {
+      background: var(--green-glow);
+      border: 1.5px solid var(--green-dim);
+      color: var(--green);
+    }
+
+    .step-num.amber {
+      background: var(--amber-dim);
+      border: 1.5px solid rgba(242,201,76,0.4);
+      color: var(--amber);
+    }
+
+    .step-label {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.25;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .step-desc strong { color: var(--ink); font-weight: 500; }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .chip {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 3px 8px;
+      color: var(--muted);
+    }
+
+    .chip.green { border-color: rgba(13,158,112,0.3); color: var(--green); background: var(--green-glow); }
+    .chip.amber { border-color: rgba(242,201,76,0.25); color: var(--amber); background: var(--amber-dim); }
+    .chip.blue  { border-color: rgba(74,158,221,0.3); color: var(--blue); background: var(--blue-dim); }
+
+    /* FOOTER */
+    .footer {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid var(--border2);
+      background: var(--surface);
+      padding: 18px 72px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .footer-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .footer-section + .footer-section {
+      border-left: 1px solid var(--border);
+      padding-left: 40px;
+      margin-left: 40px;
+    }
+
+    .footer-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .metrics-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .metric-chip {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 3px 9px;
+      color: var(--ink);
+    }
+
+    .metric-chip.greek { border-color: rgba(74,158,221,0.3); color: var(--blue); }
+    .metric-chip.price { border-color: rgba(13,158,112,0.3); color: var(--green); }
+    .metric-chip.mbo   { border-color: rgba(242,201,76,0.3); color: var(--amber); }
+
+    .stack-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .stack-item {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stack-item::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .stack-item.g::before { background: var(--green); }
+    .stack-item.a::before { background: var(--amber); }
+    .stack-item.b::before { background: var(--blue); }
+
+    /* FLOW CONNECTOR ARROW between cards */
+    .steps-grid-wrapper {
+      position: relative;
+      flex: 1;
+    }
+
+    /* NAV */
+    #nav {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 100;
+      background: rgba(20,28,37,0.85);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 40px;
+      padding: 10px 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      color: #e8edf3;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
+      font-size: 16px;
+    }
+
+    .nav-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+    .nav-dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .nav-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: background 0.2s, transform 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .nav-dot.active {
+      background: var(--green);
+      transform: scale(1.3);
+    }
+
+    .nav-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="canvas">
+
+    <!-- SLIDE 1: DATA PIPELINE -->
+    <div class="slide active" id="slide-0">
+      <div class="blob blob-green"></div>
+      <div class="blob blob-amber"></div>
+      <div class="blob blob-blue"></div>
+
+      <header class="header">
+        <div class="header-left">
+          <span class="kicker">Market Explorer · Slide 1 of 2</span>
+          <h1 class="slide-title">Data <span class="accent-green">Pipeline</span></h1>
+        </div>
+        <div class="header-right">
+          <span class="tag">pipeline_clean_lob.py</span>
+          <span class="tag">Python 3 · pandas · orjson</span>
+        </div>
+      </header>
+
+      <div class="body">
+        <div class="steps-grid">
+
+          <div class="step-card green">
+            <div class="step-top">
+              <div class="step-num green">1</div>
+              <div class="step-label">URL List Input</div>
+            </div>
+            <div class="step-desc">
+              A plain text file holds one URL per line, each pointing to a compressed limit order book snapshot. File names encode the trading session date and time: <strong>loaded_lob_YYYYMMDD_HHMM.csv.gz</strong>. Optional <code style="font-family:var(--mono);font-size:12px">--date</code> and <code style="font-family:var(--mono);font-size:12px">--limit</code> flags filter the list before processing begins.
+            </div>
+            <div class="chips">
+              <span class="chip green">urls.txt</span>
+              <span class="chip">date filter</span>
+              <span class="chip">limit N</span>
+            </div>
+          </div>
+
+          <div class="step-card green">
+            <div class="step-top">
+              <div class="step-num green">2</div>
+              <div class="step-label">Parallel Download</div>
+            </div>
+            <div class="step-desc">
+              <strong>8 worker processes</strong> run concurrently via <strong>ProcessPoolExecutor</strong>. Each worker independently downloads one file with automatic retry — 3 attempts at 90 s timeout each. Results are streamed to disk as workers complete; order is not guaranteed.
+            </div>
+            <div class="chips">
+              <span class="chip green">8 workers</span>
+              <span class="chip">ProcessPoolExecutor</span>
+              <span class="chip">3 retries / 90 s</span>
+            </div>
+          </div>
+
+          <div class="step-card green">
+            <div class="step-top">
+              <div class="step-num green">3</div>
+              <div class="step-label">Double Decompress and Parse</div>
+            </div>
+            <div class="step-desc">
+              Each file is <strong>double-gzipped</strong>: decompressed once to reveal a gzip stream, then again to reveal a JSON string, which is parsed to yield another JSON structure — the final list of market records. <strong>orjson</strong> is used for speed; falls back to stdlib json automatically.
+            </div>
+            <div class="chips">
+              <span class="chip green">gzip → gzip</span>
+              <span class="chip green">JSON → JSON</span>
+              <span class="chip">orjson fallback</span>
+            </div>
+          </div>
+
+          <div class="step-card green">
+            <div class="step-top">
+              <div class="step-num green">4</div>
+              <div class="step-label">Aggregate and Write CSV</div>
+            </div>
+            <div class="step-desc">
+              Records load into a <strong>pandas DataFrame</strong> and split by Bid / Ask side. Two strategies run per side: a <strong>per-minute mean</strong> across all 22 numeric fields, plus up to <strong>N nearest-the-money samples</strong> anchored to the ES futures price. Output is <strong>aggregated_lob.csv</strong> — 24 columns, one row per record.
+            </div>
+            <div class="chips">
+              <span class="chip green">per-side mean</span>
+              <span class="chip green">ATM samples (N=20)</span>
+              <span class="chip">aggregated_lob.csv</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div class="footer-section">
+          <div class="footer-label">Output Schema — 24 Columns</div>
+          <div class="metrics-row">
+            <span class="metric-chip price">timestamp</span>
+            <span class="metric-chip price">Side</span>
+            <span class="metric-chip price">ES futures price</span>
+            <span class="metric-chip price">SPX strike</span>
+            <span class="metric-chip price">futures strike</span>
+            <span class="metric-chip mbo">MBO pulling stacking</span>
+            <span class="metric-chip greek">Δ delta</span>
+            <span class="metric-chip greek">Γ gamma</span>
+            <span class="metric-chip greek">ν vega</span>
+            <span class="metric-chip greek">Θ theta</span>
+            <span class="metric-chip greek">ρ rho</span>
+            <span class="metric-chip greek">vanna</span>
+            <span class="metric-chip greek">charm</span>
+            <span class="metric-chip greek">vomma</span>
+          </div>
+        </div>
+        <div class="footer-section">
+          <div class="footer-label">Technology</div>
+          <div class="stack-row">
+            <span class="stack-item g">Python 3</span>
+            <span class="stack-item g">pandas</span>
+            <span class="stack-item g">orjson</span>
+            <span class="stack-item g">ProcessPoolExecutor</span>
+            <span class="stack-item g">urllib</span>
+            <span class="stack-item g">tqdm progress</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- SLIDE 2: VISUALIZATION ENGINE -->
+    <div class="slide" id="slide-1">
+      <div class="blob blob-amber2"></div>
+      <div class="blob blob-green2"></div>
+      <div class="blob blob-blue"></div>
+
+      <header class="header">
+        <div class="header-left">
+          <span class="kicker amber">Market Explorer · Slide 2 of 2</span>
+          <h1 class="slide-title">Visualization <span class="accent-amber">Engine</span></h1>
+        </div>
+        <div class="header-right">
+          <span class="tag">interactive_3d_builder/</span>
+          <span class="tag">Plotly.js 2.35 · WebGL</span>
+        </div>
+      </header>
+
+      <div class="body">
+        <div class="steps-grid">
+
+          <div class="step-card amber">
+            <div class="step-top">
+              <div class="step-num amber">1</div>
+              <div class="step-label">Load and Stratified Sample</div>
+            </div>
+            <div class="step-desc">
+              The builder reads <strong>aggregated_lob.csv</strong> and applies a two-stage strategy: first a <strong>stratified sample</strong> proportional across each dataset × side combination so no group dominates, then an <strong>evenly-spaced subset</strong> within each group. A configurable max-points cap keeps HTML size manageable.
+            </div>
+            <div class="chips">
+              <span class="chip amber">stratified sample</span>
+              <span class="chip amber">evenly-spaced subset</span>
+              <span class="chip">max-points cap</span>
+            </div>
+          </div>
+
+          <div class="step-card amber">
+            <div class="step-top">
+              <div class="step-num amber">2</div>
+              <div class="step-label">Self-Contained HTML Generation</div>
+            </div>
+            <div class="step-desc">
+              The renderer injects all sampled data into the HTML template as two JavaScript objects: <strong>DATA</strong> — column arrays for every metric — and <strong>META</strong> — dataset labels, timestamp range, row counts, and side summaries. The resulting file needs <strong>no server</strong> and opens offline in any browser.
+            </div>
+            <div class="chips">
+              <span class="chip amber">DATA column arrays</span>
+              <span class="chip amber">META summaries</span>
+              <span class="chip">zero-server HTML</span>
+            </div>
+          </div>
+
+          <div class="step-card amber">
+            <div class="step-top">
+              <div class="step-num amber">3</div>
+              <div class="step-label">3D Point Cloud via Plotly</div>
+            </div>
+            <div class="step-desc">
+              <strong>Plotly.js scatter3d</strong> renders the data interactively. Any three metrics map to <strong>X · Y · Z axes</strong>, swappable freely. Color encodes Bid vs Ask side, source file, or any continuous metric on a blue to amber to red scale. Five preset views guide users from beginner layouts to full option-risk exploration.
+            </div>
+            <div class="chips">
+              <span class="chip amber">scatter3d</span>
+              <span class="chip amber">3 color modes</span>
+              <span class="chip">5 presets</span>
+              <span class="chip">draw-limit slider</span>
+            </div>
+          </div>
+
+          <div class="step-card amber">
+            <div class="step-top">
+              <div class="step-num amber">4</div>
+              <div class="step-label">2D Projection and Reading Guides</div>
+            </div>
+            <div class="step-desc">
+              A companion <strong>WebGL scattergl</strong> chart shows any two-axis projection — XY, XZ, or YZ — for pattern confirmation in flat space. Alongside it: a live <strong>plain-English reading guide</strong> explaining the current axes, per-metric glossary cards, and a source-file summary table with row counts, time spans, and Bid / Ask mix.
+            </div>
+            <div class="chips">
+              <span class="chip amber">scattergl WebGL</span>
+              <span class="chip amber">XY · XZ · YZ</span>
+              <span class="chip">reading guide</span>
+              <span class="chip">glossary</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div class="footer-section">
+          <div class="footer-label">Visualized Metrics — Option Greeks</div>
+          <div class="metrics-row">
+            <span class="metric-chip greek">Δ delta call</span>
+            <span class="metric-chip greek">Δ delta put</span>
+            <span class="metric-chip greek">Γ gamma</span>
+            <span class="metric-chip greek">ν vega</span>
+            <span class="metric-chip greek">Θ theta</span>
+            <span class="metric-chip greek">ρ rho</span>
+            <span class="metric-chip greek">vanna</span>
+            <span class="metric-chip greek">charm</span>
+            <span class="metric-chip greek">vomma</span>
+          </div>
+        </div>
+        <div class="footer-section">
+          <div class="footer-label">Visualized Metrics — Market Anchors</div>
+          <div class="metrics-row">
+            <span class="metric-chip price">ES futures price</span>
+            <span class="metric-chip price">SPX strike</span>
+            <span class="metric-chip price">futures strike</span>
+            <span class="metric-chip price">elapsed time</span>
+            <span class="metric-chip mbo">MBO pulling stacking</span>
+          </div>
+        </div>
+        <div class="footer-section">
+          <div class="footer-label">Technology</div>
+          <div class="stack-row">
+            <span class="stack-item a">Plotly.js 2.35</span>
+            <span class="stack-item a">scatter3d</span>
+            <span class="stack-item a">scattergl WebGL</span>
+            <span class="stack-item b">Self-contained HTML</span>
+            <span class="stack-item b">Zero-server deployment</span>
+            <span class="stack-item b">Offline capable</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+  </div><!-- /canvas -->
+</div><!-- /stage -->
+
+<!-- NAV -->
+<div id="nav">
+  <button class="nav-btn" id="prev" disabled aria-label="Previous">&#8592;</button>
+  <div class="nav-dots">
+    <button class="nav-dot active" data-i="0" aria-label="Slide 1"></button>
+    <button class="nav-dot" data-i="1" aria-label="Slide 2"></button>
+  </div>
+  <span class="nav-label" id="nav-label">1 / 2</span>
+  <button class="nav-btn" id="next" aria-label="Next">&#8594;</button>
+</div>
+
+<script>
+  (function () {
+    // Scale canvas to fit viewport
+    function scale() {
+      var canvas = document.getElementById('canvas');
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      canvas.style.transform = 'scale(' + s + ')';
+    }
+    scale();
+    window.addEventListener('resize', scale);
+
+    // Navigation
+    var current = 0;
+    var slides = document.querySelectorAll('.slide');
+    var dots = document.querySelectorAll('.nav-dot');
+    var prevBtn = document.getElementById('prev');
+    var nextBtn = document.getElementById('next');
+    var navLabel = document.getElementById('nav-label');
+
+    function goTo(n) {
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = n;
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+      navLabel.textContent = (current + 1) + ' / ' + slides.length;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === slides.length - 1;
+      window.postMessage({ slideIndexChanged: current }, '*');
+    }
+
+    prevBtn.addEventListener('click', function () { if (current > 0) goTo(current - 1); });
+    nextBtn.addEventListener('click', function () { if (current < slides.length - 1) goTo(current + 1); });
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () { goTo(parseInt(dot.dataset.i)); });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { if (current < slides.length - 1) goTo(current + 1); }
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { if (current > 0) goTo(current - 1); }
+    });
+
+    window.postMessage({ slideIndexChanged: 0 }, '*');
+  })();
+</script>
+
+</body>
+</html>
